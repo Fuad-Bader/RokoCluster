@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: roko-cluster
+  namespace: roko
+  labels:
+    app.kubernetes.io/name: roko-cluster
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: roko-cluster
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: roko-cluster
+    spec:
+      serviceAccountName: roko-backend
+      containers:
+        - name: roko
+          # Replace with your published image.
+          image: ghcr.io/your-org/roko-cluster:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4000
+              name: http
+          env:
+            - name: PORT
+              value: "4000"
+            - name: KUBE_AUTH
+              value: "in-cluster"
+            - name: STATIC_DIR
+              value: "/app/frontend"
+            - name: CORS_ORIGINS
+              value: "http://localhost:4000"
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]

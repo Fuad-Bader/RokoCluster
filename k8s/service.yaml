@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: roko-cluster
+  namespace: roko
+  labels:
+    app.kubernetes.io/name: roko-cluster
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: roko-cluster
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+# Optional ingress — uncomment and set your host/TLS to expose externally.
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: roko-cluster
+#   namespace: roko
+#   annotations:
+#     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+# spec:
+#   ingressClassName: nginx
+#   rules:
+#     - host: roko.example.com
+#       http:
+#         paths:
+#           - path: /
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: roko-cluster
+#                 port:
+#                   number: 80

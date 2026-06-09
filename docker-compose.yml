@@ -1,0 +1,42 @@
+# RokoCluster — single-container stack (backend serves the built UI).
+#
+# Usage:
+#   docker compose up --build
+#   → http://localhost:4000  (then upload your kubeconfig from the UI)
+#
+# By default the server starts with NO cluster connection: open the app and
+# upload a kubeconfig through the "connect cluster" dialog. The config is held
+# in memory by the backend and never written to disk.
+#
+# Prefer to auto-load a kubeconfig on startup instead? Set KUBE_AUTH=default and
+# mount it (uncomment the `volumes` block below):
+#   KUBECONFIG_DIR=%USERPROFILE%\.kube docker compose up --build   (cmd)
+#   $env:KUBECONFIG_DIR="$HOME\.kube"; docker compose up --build    (PowerShell)
+services:
+  roko:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: roko-cluster:latest
+    container_name: roko-cluster
+    ports:
+      - "${PORT:-4000}:4000"
+    environment:
+      PORT: "4000"
+      # upload (default) | default (mount kubeconfig) | in-cluster
+      KUBE_AUTH: "${KUBE_AUTH:-upload}"
+      KUBECONFIG: "/home/node/.kube/config"
+      STATIC_DIR: "/app/frontend"
+      CORS_ORIGINS: "http://localhost:4000"
+      CACHE_TTL_MS: "5000"
+      REBUILD_DEBOUNCE_MS: "300"
+    # Only needed when KUBE_AUTH=default — mount your kubeconfig read-only.
+    # volumes:
+    #   - "${KUBECONFIG_DIR:-${HOME:-/root}/.kube}:/home/node/.kube:ro"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s

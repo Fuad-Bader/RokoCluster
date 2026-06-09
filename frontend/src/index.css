@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    background: #0b0e14;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  .section-title {
+    @apply mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500;
+  }
+  .action-btn {
+    @apply rounded bg-white/10 px-2.5 py-1 text-xs text-gray-100 transition hover:bg-white/20 disabled:opacity-40;
+  }
+  .action-btn.danger {
+    @apply bg-red-500/20 text-red-200 hover:bg-red-500/30;
+  }
+  .chip {
+    @apply rounded-full bg-white/5 px-2.5 py-0.5 text-gray-300 transition hover:bg-white/15;
+  }
+}
+
+/* Tame xterm inside its flex container */
+.xterm {
+  height: 100%;
+}

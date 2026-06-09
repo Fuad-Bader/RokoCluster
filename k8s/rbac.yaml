@@ -1,0 +1,55 @@
+# Least-privilege RBAC for the backend service account. Grants exactly what the
+# graph, detail, exec/logs and action endpoints need — read across core
+# workloads, log/exec on pods, and mutate deployments/pods/services for the
+# scale / restart / delete actions. Tighten or scope to specific namespaces
+# (Role + RoleBinding instead of Cluster*) for production.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: roko-backend
+  namespace: roko
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: roko-backend
+rules:
+  # Read core resources for the graph + detail view.
+  - apiGroups: [""]
+    resources: ["pods", "services", "nodes", "namespaces", "events", "endpoints"]
+    verbs: ["get", "list", "watch"]
+  # Stream logs.
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list"]
+  # Interactive exec into containers.
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create", "get"]
+  # Delete (restart) pods and delete services.
+  - apiGroups: [""]
+    resources: ["pods", "services"]
+    verbs: ["delete"]
+  # Deployments: read for the graph, update for scale/restart, delete for the action.
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "update", "patch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: roko-backend
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: roko-backend
+subjects:
+  - kind: ServiceAccount
+    name: roko-backend
+    namespace: roko

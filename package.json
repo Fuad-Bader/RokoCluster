@@ -1,0 +1,29 @@
+{
+  "name": "roko-cluster",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Visual Kubernetes cluster viewer and manager with an Obsidian-style force-directed graph, integrated terminal, and live kubectl actions.",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "electron"
+  ],
+  "scripts": {
+    "install:all": "npm install",
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:backend": "npm --workspace backend run dev",
+    "dev:frontend": "npm --workspace frontend run dev",
+    "build": "npm --workspace backend run build && npm --workspace frontend run build",
+    "build:backend": "npm --workspace backend run build",
+    "build:frontend": "npm --workspace frontend run build",
+    "start": "npm --workspace backend run start",
+    "electron": "npm --workspace electron run start",
+    "electron:dev": "npm --workspace electron run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
