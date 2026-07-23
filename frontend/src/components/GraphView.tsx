@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
 import ForceGraph2D, { type ForceGraphMethods } from 'react-force-graph-2d';
 import { useStore } from '../store/useStore';
 import { applyFilters, matchesSearch, neighborsOf } from '../lib/filter';
@@ -14,6 +20,8 @@ const LINK_DISTANCE: Record<GraphLink['kind'], number> = {
   targets: 60,
   'belongs-to': 30,
 };
+
+const MIN_NODE_HIT_RADIUS_PX = 12;
 
 function endpointId(e: string | GraphNode): string {
   return typeof e === 'string' ? e : e.id;
@@ -118,13 +126,13 @@ export function GraphView() {
     [highlight, selectedId, filters.search],
   );
 
-  const onNodeClick = useCallback(
-    (node: GraphNode, event: MouseEvent) => {
+  const activateNode = useCallback(
+    (node: GraphNode, clickCount: number) => {
       select(node.id);
       const now = Date.now();
       const previous = lastClickRef.current;
       const isDoubleClick =
-        event.detail >= 2 ||
+        clickCount >= 2 ||
         (previous?.id === node.id && now - previous.at < 650);
       if (isDoubleClick) {
         inspect(node.id);
@@ -136,8 +144,81 @@ export function GraphView() {
     [inspect, select],
   );
 
+  const onCanvasClick = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      const fg = fgRef.current;
+      const container = containerRef.current;
+      if (!fg || !container) return;
+
+      const rect = container.getBoundingClientRect();
+      const pointerX = event.clientX - rect.left;
+      const pointerY = event.clientY - rect.top;
+      const scale = fg.zoom();
+
+      let circleHit: { node: GraphNode; score: number } | null = null;
+      let labelHit: { node: GraphNode; score: number } | null = null;
+
+      for (const node of data.nodes) {
+        if (node.x == null || node.y == null) continue;
+        const screen = fg.graph2ScreenCoords(node.x, node.y);
+        const dx = pointerX - screen.x;
+        const dy = pointerY - screen.y;
+        const distance = Math.hypot(dx, dy);
+        const radius = Math.max(
+          MIN_NODE_HIT_RADIUS_PX,
+          (KIND_STYLE[node.kind].size + 2) * scale,
+        );
+
+        if (distance <= radius) {
+          const score = distance / radius;
+          if (!circleHit || score < circleHit.score) circleHit = { node, score };
+        }
+
+        const dimmed = highlight ? !highlight.has(node.id) : false;
+        const matched = matchesSearch(node, filters.search);
+        const showLabel =
+          !dimmed &&
+          matched &&
+          (scale > 1.3 || node.kind === 'Namespace' || node.kind === 'Node');
+        if (!showLabel) continue;
+
+        const fontPx = Math.max(10, 2.2 * scale);
+        const labelWidth = Math.max(28, node.name.length * fontPx * 0.56);
+        const labelTop =
+          screen.y + (KIND_STYLE[node.kind].size + 1.5) * scale - 3;
+        const labelHeight = fontPx * 1.45 + 6;
+        const insideLabel =
+          pointerX >= screen.x - labelWidth / 2 - 4 &&
+          pointerX <= screen.x + labelWidth / 2 + 4 &&
+          pointerY >= labelTop &&
+          pointerY <= labelTop + labelHeight;
+        if (insideLabel) {
+          const score =
+            Math.abs(pointerX - screen.x) / labelWidth +
+            Math.abs(pointerY - (labelTop + labelHeight / 2)) / labelHeight;
+          if (!labelHit || score < labelHit.score) labelHit = { node, score };
+        }
+      }
+
+      // A click inside a circle always wins over an overlapping label.
+      const node = circleHit?.node ?? labelHit?.node;
+      if (node) {
+        activateNode(node, event.detail);
+      } else {
+        select(null);
+        lastClickRef.current = null;
+      }
+    },
+    [activateNode, data.nodes, filters.search, highlight, select],
+  );
+
   return (
-    <div ref={containerRef} className="absolute inset-0">
+    <div
+      ref={containerRef}
+      className="absolute inset-0"
+      onClickCapture={onCanvasClick}
+    >
       <ForceGraph2D
         ref={fgRef}
         graphData={data}
@@ -150,9 +231,12 @@ export function GraphView() {
           }`
         }
         nodeCanvasObject={drawNode}
-        nodePointerAreaPaint={(node: GraphNode, color, ctx) => {
+        nodePointerAreaPaint={(node: GraphNode, color, ctx, scale) => {
           ctx.fillStyle = color;
-          const r = KIND_STYLE[node.kind].size + 2;
+          const r = Math.max(
+            KIND_STYLE[node.kind].size + 2,
+            MIN_NODE_HIT_RADIUS_PX / scale,
+          );
           ctx.beginPath();
           ctx.arc(node.x ?? 0, node.y ?? 0, r, 0, 2 * Math.PI);
           ctx.fill();
@@ -168,9 +252,7 @@ export function GraphView() {
             : 0.6
         }
         linkDirectionalParticles={0}
-        onNodeClick={onNodeClick}
         onNodeHover={(n: GraphNode | null) => setHover(n?.id ?? null)}
-        onBackgroundClick={() => select(null)}
         onNodeDragEnd={(node: GraphNode) => {
           // Pin where dropped — Obsidian-style "sticky" drag.
           node.fx = node.x;
