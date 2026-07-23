@@ -34,6 +34,7 @@ interface State {
   lastError: string | null;
 
   selectedId: string | null;
+  inspectedId: string | null;
   hoverId: string | null;
   filters: Filters;
   terminal: TerminalSession | null;
@@ -47,6 +48,7 @@ interface State {
   setShowConnect: (v: boolean) => void;
   setGraph: (g: GraphModel) => void;
   select: (id: string | null) => void;
+  inspect: (id: string | null) => void;
   setHover: (id: string | null) => void;
   setSearch: (q: string) => void;
   toggleKind: (k: ResourceKind) => void;
@@ -98,6 +100,7 @@ export const useStore = create<State>((set, get) => ({
   lastError: null,
 
   selectedId: null,
+  inspectedId: null,
   hoverId: null,
   filters: {
     search: '',
@@ -162,7 +165,14 @@ export const useStore = create<State>((set, get) => ({
 
   disconnect: async () => {
     const status = await api.disconnect();
-    set({ status, graph: { nodes: [], links: [] }, namespaces: [], showConnect: true });
+    set({
+      status,
+      graph: { nodes: [], links: [] },
+      namespaces: [],
+      selectedId: null,
+      inspectedId: null,
+      showConnect: true,
+    });
   },
 
   setShowConnect: (showConnect) => set({ showConnect }),
@@ -176,6 +186,7 @@ export const useStore = create<State>((set, get) => ({
   },
 
   select: (id) => set({ selectedId: id }),
+  inspect: (id) => set({ inspectedId: id, selectedId: id }),
   setHover: (id) => set({ hoverId: id }),
   setSearch: (search) => set((s) => ({ filters: { ...s.filters, search } })),
   toggleKind: (k) =>

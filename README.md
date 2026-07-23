@@ -1,9 +1,11 @@
 # RokoCluster — Visual Kubernetes Viewer & Manager
 
-An interactive, Obsidian-style force-directed graph of your Kubernetes cluster,
-with a resource detail panel, context-sensitive actions (scale / restart /
-delete), live `watch`-driven updates, and an integrated `xterm.js` terminal for
-streaming logs and interactive `exec` shells.
+An interactive, Obsidian-style force-directed graph of your Kubernetes cluster.
+Double-click any entity to inspect its description, relationships, declared
+ports, connected Services, reachable endpoints, and port-forward command. The
+app also provides context-sensitive actions (scale / restart / delete), live
+`watch`-driven updates, and an integrated `xterm.js` terminal for streaming
+logs and interactive `exec` shells.
 
 Runs as a **web app**, a **single deployable container**, or an **Electron
 desktop app** — all from one codebase.
@@ -153,6 +155,8 @@ Backend (see `backend/.env.example`):
 |----------|---------|---------|
 | `PORT` | `4000` | HTTP/WS listen port |
 | `KUBE_AUTH` | `upload` | `upload` (connect in UI), `default` (local kubeconfig), or `in-cluster` |
+| `MINIKUBE_DIR` | `$USERPROFILE/.minikube` | Host Minikube credential directory mounted read-only by Docker Compose |
+| `KUBE_LOOPBACK_HOST` | _(unset)_ | Rewrite uploaded loopback API hosts (Compose sets `host.docker.internal`) |
 | `CORS_ORIGINS` | dev origins | Comma-separated allow-list |
 | `STATIC_DIR` | _unset_ | Serve a built frontend from this dir |
 | `CACHE_TTL_MS` | `5000` | Detail/manifest cache TTL |
@@ -168,7 +172,8 @@ REST (`/api`):
 - `POST /connect/context` `{context}` — switch context within the loaded kubeconfig
 - `POST /connect/disconnect` — drop the in-memory config and clear the graph
 - `GET /graph` — current graph snapshot
-- `GET /resource?kind=&name=&namespace=&container=` — manifest + recent events
+- `GET /resource?kind=&name=&namespace=&container=` — description, relationships,
+  network access, manifest, and recent events
 - `POST /actions/scale` `{namespace,name,replicas}`
 - `POST /actions/restart` `{namespace,name}` — rollout restart a Deployment
 - `POST /actions/delete` `{kind,namespace,name}` — Pod / Service / Deployment

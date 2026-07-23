@@ -31,7 +31,10 @@ connectRouter.post('/connect/kubeconfig', async (req, res) => {
     if (Buffer.byteLength(kubeconfig, 'utf8') > MAX_KUBECONFIG_BYTES) {
       return res.status(413).json({ error: 'kubeconfig is too large' });
     }
-    configureFromString(kubeconfig, typeof context === 'string' && context ? context : undefined);
+    await configureFromString(
+      kubeconfig,
+      typeof context === 'string' && context ? context : undefined,
+    );
     await getStore().restart();
     res.json({ ok: true, ...getStatus() });
   } catch (err) {

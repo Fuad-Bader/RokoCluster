@@ -22,12 +22,14 @@ function endpointId(e: string | GraphNode): string {
 export function GraphView() {
   const fgRef = useRef<ForceGraphMethods<GraphNode, GraphLink> | undefined>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastClickRef = useRef<{ id: string; at: number } | null>(null);
 
   const graph = useStore((s) => s.graph);
   const filters = useStore((s) => s.filters);
   const selectedId = useStore((s) => s.selectedId);
   const hoverId = useStore((s) => s.hoverId);
   const select = useStore((s) => s.select);
+  const inspect = useStore((s) => s.inspect);
   const setHover = useStore((s) => s.setHover);
 
   const data = useMemo(() => applyFilters(graph, filters), [graph, filters]);
@@ -117,14 +119,21 @@ export function GraphView() {
   );
 
   const onNodeClick = useCallback(
-    (node: GraphNode) => {
+    (node: GraphNode, event: MouseEvent) => {
       select(node.id);
-      const fg = fgRef.current;
-      if (fg && node.x != null && node.y != null) {
-        fg.centerAt(node.x, node.y, 600);
+      const now = Date.now();
+      const previous = lastClickRef.current;
+      const isDoubleClick =
+        event.detail >= 2 ||
+        (previous?.id === node.id && now - previous.at < 650);
+      if (isDoubleClick) {
+        inspect(node.id);
+        lastClickRef.current = null;
+      } else {
+        lastClickRef.current = { id: node.id, at: now };
       }
     },
-    [select],
+    [inspect, select],
   );
 
   return (

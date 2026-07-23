@@ -19,6 +19,16 @@ export const config = {
    */
   kubeAuth: (process.env.KUBE_AUTH ?? 'upload') as 'upload' | 'default' | 'in-cluster',
 
+  /**
+   * Docker bridge for uploaded local Minikube configs. The compose stack
+   * mounts the host's .minikube directory here and makes the host API server
+   * reachable through host.docker.internal.
+   */
+  minikubeMountPath: process.env.MINIKUBE_MOUNT_PATH?.trim() || null,
+  kubeLoopbackHost: process.env.KUBE_LOOPBACK_HOST?.trim() || null,
+  kubeLoopbackTlsServerName:
+    process.env.KUBE_LOOPBACK_TLS_SERVER_NAME?.trim() || null,
+
   /** TTL for cached resource detail/manifest reads, in milliseconds. */
   cacheTtlMs: Number(process.env.CACHE_TTL_MS ?? 5000),
 

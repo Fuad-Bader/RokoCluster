@@ -4,6 +4,7 @@ import { TtlCache } from '../cache.js';
 import { config } from '../config.js';
 import { assertKind, assertName, assertOptionalName, ValidationError } from './validate.js';
 import type { KubeEventSummary, ResourceDetail } from '../types.js';
+import { buildResourceInsights } from '../k8s/insights.js';
 
 const cache = new TtlCache<ResourceDetail>(config.cacheTtlMs);
 
@@ -76,7 +77,22 @@ detailRouter.get('/resource', async (req, res) => {
     const detail = await cache.wrap(cacheKey, async () => {
       const manifest = await readManifest(kind, name, namespace, container);
       const events = await readEvents(name, namespace);
-      return { id: cacheKey, kind, name, namespace, manifest, events } satisfies ResourceDetail;
+      const insights = await buildResourceInsights({
+        kind,
+        name,
+        namespace,
+        container,
+        manifest,
+      });
+      return {
+        id: cacheKey,
+        kind,
+        name,
+        namespace,
+        ...insights,
+        manifest,
+        events,
+      } satisfies ResourceDetail;
     });
     res.json(detail);
   } catch (err) {

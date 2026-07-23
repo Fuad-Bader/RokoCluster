@@ -67,8 +67,68 @@ export interface ResourceDetail {
   kind: ResourceKind;
   name: string;
   namespace?: string;
+  overview: ResourceOverviewField[];
+  relationships: ResourceRelationship[];
+  network: ResourceNetwork;
   manifest: unknown;
   events: KubeEventSummary[];
+}
+
+export interface ResourceOverviewField {
+  label: string;
+  value: string;
+}
+
+export interface ResourceRelationship {
+  id: string;
+  kind: ResourceKind;
+  name: string;
+  namespace?: string;
+  relation: string;
+}
+
+export interface DeclaredPort {
+  container: string;
+  name?: string;
+  port: number;
+  hostPort?: number;
+  protocol: string;
+}
+
+export interface ServicePortDetail {
+  name?: string;
+  protocol: string;
+  port: number;
+  targetPort: string;
+  nodePort?: number;
+  appProtocol?: string;
+}
+
+export interface NetworkEndpoint {
+  scope: 'pod' | 'cluster' | 'node' | 'external' | 'host';
+  address: string;
+  port: number;
+  protocol: string;
+  description: string;
+}
+
+export interface ServiceConnection {
+  name: string;
+  namespace: string;
+  type: string;
+  selector: Record<string, string>;
+  ports: ServicePortDetail[];
+  endpoints: NetworkEndpoint[];
+  targetPods: string[];
+  portForwardCommand?: string;
+}
+
+export interface ResourceNetwork {
+  podIPs: string[];
+  hostIPs: string[];
+  declaredPorts: DeclaredPort[];
+  services: ServiceConnection[];
+  directPortForwardCommand?: string;
 }
 
 export interface KubeEventSummary {

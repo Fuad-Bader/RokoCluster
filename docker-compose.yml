@@ -12,6 +12,10 @@
 # mount it (uncomment the `volumes` block below):
 #   KUBECONFIG_DIR=%USERPROFILE%\.kube docker compose up --build   (cmd)
 #   $env:KUBECONFIG_DIR="$HOME\.kube"; docker compose up --build    (PowerShell)
+#
+# Local Minikube uploads work without flattening: the host .minikube directory
+# is mounted read-only and Windows file references/API loopback addresses are
+# adapted by the backend. Override MINIKUBE_DIR if yours is stored elsewhere.
 services:
   roko:
     build:
@@ -26,13 +30,20 @@ services:
       # upload (default) | default (mount kubeconfig) | in-cluster
       KUBE_AUTH: "${KUBE_AUTH:-upload}"
       KUBECONFIG: "/home/node/.kube/config"
+      MINIKUBE_MOUNT_PATH: "/host-minikube"
+      KUBE_LOOPBACK_HOST: "host.docker.internal"
+      KUBE_LOOPBACK_TLS_SERVER_NAME: "localhost"
       STATIC_DIR: "/app/frontend"
       CORS_ORIGINS: "http://localhost:4000"
       CACHE_TTL_MS: "5000"
       REBUILD_DEBOUNCE_MS: "300"
-    # Only needed when KUBE_AUTH=default — mount your kubeconfig read-only.
-    # volumes:
-    #   - "${KUBECONFIG_DIR:-${HOME:-/root}/.kube}:/home/node/.kube:ro"
+    volumes:
+      # Supports ordinary Minikube kubeconfigs that reference certificate files.
+      - "${MINIKUBE_DIR:-${USERPROFILE:-${HOME:-/root}}/.minikube}:/host-minikube:ro"
+      # Also mount this when using KUBE_AUTH=default:
+      # - "${KUBECONFIG_DIR:-${USERPROFILE:-${HOME:-/root}}/.kube}:/home/node/.kube:ro"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
